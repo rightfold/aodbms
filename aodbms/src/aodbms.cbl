@@ -27,7 +27,6 @@
        pa-entry.
            PERFORM se-initialize
            PERFORM se-command FOREVER
-           STOP RUN
            .
 
       ******************************************************************
