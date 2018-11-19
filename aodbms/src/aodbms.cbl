@@ -10,9 +10,11 @@
        01 ws-zmq.
            02 ws-zmq-rep               BINARY-LONG SIGNED VALUE 4.
            02 ws-status                BINARY-LONG SIGNED.
+           02 ws-flags                 BINARY-LONG SIGNED.
            02 ws-context               POINTER.
            02 ws-socket                POINTER.
            02 ws-bind-address          PIC X(257).
+           02 ws-message               PIC X(64).
 
        01 ws-crash.
            02 ws-origin                PIC X(20).
@@ -69,17 +71,43 @@
            END-IF
            .
 
+       pa-initialize-zmq-msg.
+           CALL STATIC 'zmq_msg_init' USING ws-message GIVING ws-status
+           .
+
       ******************************************************************
       * This section receives and executes a single command.
 
        se-command SECTION.
 
        pa-command-receive.
-           DISPLAY 'RECEIVE'
+           MOVE 0 TO ws-flags
+           CALL STATIC 'zmq_msg_recv'
+               USING REFERENCE ws-message
+                     VALUE ws-socket
+                     VALUE ws-flags
+               GIVING ws-status
+           IF ws-status IS EQUAL TO -1 THEN
+               MOVE 'zmq_msg_recv' TO ws-origin
+               GO TO se-crash
+           END-IF
            .
 
        pa-command-process.
-           CALL STATIC 'C$SLEEP' USING 1
+           DISPLAY ws-message
+           .
+
+       pa-command-respond.
+           MOVE 0 TO ws-flags
+           CALL STATIC 'zmq_msg_send'
+               USING REFERENCE ws-message
+                     VALUE ws-socket
+                     VALUE ws-flags
+               GIVING ws-status
+           IF ws-status IS EQUAL TO -1 THEN
+               MOVE 'zmq_msg_send' TO ws-origin
+               GO TO se-crash
+           END-IF
            .
 
       ******************************************************************
