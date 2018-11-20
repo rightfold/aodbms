@@ -1,6 +1,6 @@
 { stdenv, gnu-cobol, zeromq }:
 stdenv.mkDerivation {
-    name = "escad";
+    name = "aodbms";
     src = ./.;
     buildInputs = [
         gnu-cobol
