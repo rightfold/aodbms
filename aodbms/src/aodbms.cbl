@@ -39,10 +39,15 @@
                03 ws-flags                 BINARY-LONG SIGNED.
 
       ******************************************************************
-      * These data items used to communicate with the se-crash section.
+      * These data items used to communicate with the se-check section.
 
-       01 ws-crash.
-           02 ws-origin                PIC X(20).
+       01 ws-check.
+           02 ws-origin                PIC X.
+               88 ws-zmq-bind          VALUE 'B'.
+               88 ws-zmq-ctx-new       VALUE 'C'.
+               88 ws-zmq-msg-recv      VALUE 'R'.
+               88 ws-zmq-msg-send      VALUE 'S'.
+               88 ws-zmq-socket        VALUE 'E'.
 
        PROCEDURE DIVISION.
 
@@ -68,20 +73,18 @@
 
        pa-initialize-zmq-context.
            CALL STATIC 'zmq_ctx_new' GIVING ws-context OF ws-zmq
-           IF ws-context OF ws-zmq IS EQUAL TO NULL THEN
-               MOVE 'zmq_ctx_new' TO ws-origin OF ws-crash
-               GO TO se-crash
-           END-IF
+
+           SET ws-zmq-ctx-new OF ws-check TO TRUE
+           PERFORM se-check
            .
 
        pa-initialize-zmq-socket.
            CALL STATIC 'zmq_socket'
                USING VALUE ws-context OF ws-zmq, VALUE ws-zmq-rep
                GIVING ws-socket OF ws-zmq
-           IF ws-socket OF ws-zmq IS EQUAL TO NULL THEN
-               MOVE 'zmq_socket' TO ws-origin OF ws-crash
-               GO TO se-crash
-           END-IF
+
+           SET ws-zmq-socket OF ws-check TO TRUE
+           PERFORM se-check
            .
 
        pa-initialize-zmq-bind.
@@ -91,10 +94,9 @@
                USING VALUE ws-socket OF ws-zmq
                      REFERENCE ws-address OF ws-zmq
                GIVING ws-status OF ws-zmq
-           IF ws-status OF ws-zmq IS EQUAL TO -1 THEN
-               MOVE 'zmq_bind' TO ws-origin OF ws-crash
-               GO TO se-crash
-           END-IF
+
+           SET ws-zmq-bind OF ws-check TO TRUE
+           PERFORM se-check
            .
 
        pa-initialize-zmq-msg.
@@ -115,10 +117,9 @@
                      VALUE ws-socket OF ws-zmq
                      VALUE ws-flags OF ws-zmq
                GIVING ws-status OF ws-zmq
-           IF ws-status OF ws-zmq IS EQUAL TO -1 THEN
-               MOVE 'zmq_msg_recv' TO ws-origin OF ws-crash
-               GO TO se-crash
-           END-IF
+
+           SET ws-zmq-msg-recv OF ws-check TO TRUE
+           PERFORM se-check
            .
 
        pa-command-process.
@@ -132,22 +133,47 @@
                      VALUE ws-socket OF ws-zmq
                      VALUE ws-flags OF ws-zmq
                GIVING ws-status OF ws-zmq
-           IF ws-status OF ws-zmq IS EQUAL TO -1 THEN
-               MOVE 'zmq_msg_send' TO ws-origin OF ws-crash
-               GO TO se-crash
-           END-IF
+
+           SET ws-zmq-msg-send OF ws-check TO TRUE
+           PERFORM se-check
            .
 
       ******************************************************************
-      * This section is used for crashing.
+      * This section is used for checking errors and crashing.
 
-       se-crash SECTION.
+       se-check SECTION.
 
-       pa-crash-announce.
-           DISPLAY FUNCTION TRIM(ws-origin OF ws-crash) UPON SYSERR
+       pa-check-analyze.
+           IF ws-zmq-bind OF ws-check AND
+               ws-status OF ws-zmq IS EQUAL TO -1 THEN
+               GO TO pa-check-crash
+           END-IF
+
+           IF ws-zmq-ctx-new OF ws-check AND
+               ws-context OF ws-zmq IS EQUAL TO NULL THEN
+               GO TO pa-check-crash
+           END-IF
+
+           IF ws-zmq-msg-recv OF ws-check AND
+               ws-status OF ws-zmq IS EQUAL TO -1 THEN
+               GO TO pa-check-crash
+           END-IF
+
+           IF ws-zmq-msg-send OF ws-check AND
+               ws-status OF ws-zmq IS EQUAL TO -1 THEN
+               GO TO pa-check-crash
+           END-IF
+
+           IF ws-zmq-socket OF ws-check AND
+               ws-socket OF ws-zmq IS EQUAL TO NULL THEN
+               GO TO pa-check-crash
+           END-IF
+
+           EXIT SECTION
            .
 
-       pa-crash-exit.
+       pa-check-crash.
+           DISPLAY FUNCTION TRIM(ws-origin OF ws-check) UPON SYSERR
            MOVE 1 TO RETURN-CODE
            STOP RUN
            .
