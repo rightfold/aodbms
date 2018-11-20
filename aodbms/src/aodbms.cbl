@@ -29,25 +29,24 @@
       *        ZMQ expects ws-message to be 8-byte aligned, and the
       *        size must be 64 bytes to correspond to the zmq_msg_t
       *        structure found in the zmq.h header.
-               03 ws-message               PIC X(64).
+               03 ws-message           PIC X(64).
 
       *        NUL-terminated, hence the increased size.
-               03 ws-address               PIC X(257).
+               03 ws-address           PIC X(257).
 
       *        Return status and flags are 32-bit signed integers.
-               03 ws-status                BINARY-LONG SIGNED.
-               03 ws-flags                 BINARY-LONG SIGNED.
+               03 ws-status            BINARY-LONG SIGNED.
+               03 ws-flags             BINARY-LONG SIGNED.
 
       ******************************************************************
       * These data items used to communicate with the se-check section.
 
-       01 ws-check.
-           02 ws-origin                PIC X.
-               88 ws-zmq-bind          VALUE 'B'.
-               88 ws-zmq-ctx-new       VALUE 'C'.
-               88 ws-zmq-msg-recv      VALUE 'R'.
-               88 ws-zmq-msg-send      VALUE 'S'.
-               88 ws-zmq-socket        VALUE 'E'.
+       01 ws-check                     PIC X.
+           88 ws-zmq-bind              VALUE 'B'.
+           88 ws-zmq-ctx-new           VALUE 'C'.
+           88 ws-zmq-msg-recv          VALUE 'R'.
+           88 ws-zmq-msg-send          VALUE 'S'.
+           88 ws-zmq-socket            VALUE 'E'.
 
        PROCEDURE DIVISION.
 
@@ -173,7 +172,7 @@
            .
 
        pa-check-crash.
-           DISPLAY FUNCTION TRIM(ws-origin OF ws-check) UPON SYSERR
+           DISPLAY ws-check UPON SYSERR
            MOVE 1 TO RETURN-CODE
            STOP RUN
            .
